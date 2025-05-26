@@ -1,0 +1,13 @@
+7. Environment Recovery
+
+    From environment.yml:
+    bash
+
+conda env remove -n trading_env
+conda env create -f ~/Dash/environment.yml
+From Backup:
+bash
+tar -xzf ~/trading_env_backup_*.tar.gz -C ~/anaconda3/envs/
+GitHub: environment.yml is versioned, so clone if needed:
+bash
+git clone https://github.com/your-username/Dash.git
