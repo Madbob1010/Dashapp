@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  dash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DISPLAY=$DISPLAY  # For GUI/plot display
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amdgpu
+              capabilities: [gpu]
+    working_dir: /app
+    command: bash -c "conda run -n trading_env python /home/madbob10/Dash/BackTest/backtestrocm3.py --plot"
+    tty: true
+    stdin_open: true
