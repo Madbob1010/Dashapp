@@ -1,0 +1,10 @@
+home/madbob10/anaconda3/
+*.egg-info/
+__pycache__/
+*.pyc
+
+# Data files
+data/*.csv
+
+# VSCode
+.vscode/
