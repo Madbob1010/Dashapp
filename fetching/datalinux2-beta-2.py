@@ -8,7 +8,6 @@ import os
 import logging
 from tqdm import tqdm
 from colorama import init, Fore, Style
-from typing import Optional
 
 # Initialize colorama for colored terminal output
 init(autoreset=True)
@@ -26,10 +25,12 @@ def fetch_binance_1m_data(symbol: str, start_date: datetime.datetime, end_date: 
         "startTime": int(start_date.timestamp() * 1000),
         "endTime": int(end_date.timestamp() * 1000)
     }
+    # Estimate total minutes for progress bar
     total_minutes = (end_date - start_date).total_seconds() / 60
     total_requests = total_minutes / limit
     print(f"{Fore.MAGENTA}Estimating ~{total_requests:.1f} API calls for {symbol} (~{total_requests * 0.5:.1f}s){Style.RESET_ALL}")
     
+    # Fetch data with progress bar
     with tqdm(total=total_minutes, desc=f"Fetching {symbol}", unit="min") as pbar:
         while params["startTime"] < params["endTime"]:
             try:
@@ -39,9 +40,9 @@ def fetch_binance_1m_data(symbol: str, start_date: datetime.datetime, end_date: 
                 if not klines:
                     break
                 data.extend(klines)
-                params["startTime"] = klines[-1][0] + 60000
+                params["startTime"] = klines[-1][0] + 60000  # Next minute
                 pbar.update(len(klines))
-                time.sleep(0.2)
+                time.sleep(0.2)  # Avoid rate limits
             except requests.exceptions.RequestException as e:
                 logging.error(f"Failed to fetch {symbol}: {e}")
                 print(f"{Fore.RED}Error fetching {symbol}, retrying...{Style.RESET_ALL}")
@@ -52,6 +53,7 @@ def fetch_binance_1m_data(symbol: str, start_date: datetime.datetime, end_date: 
         print(f"{Fore.RED}No data for {symbol}{Style.RESET_ALL}")
         return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume", "num_trades"])
     
+    # Structure data into DataFrame
     df = pd.DataFrame(data, columns=[
         "open_time", "open", "high", "low", "close", "volume",
         "close_time", "quote_volume", "num_trades", "taker_buy_base",
@@ -106,11 +108,13 @@ def update_crypto_csv(symbol: str, start_date: datetime.datetime, end_date: date
     Update CSV file for a cryptocurrency with new 1-minute data, using date range in filename.
     Returns the path to the saved CSV.
     """
+    # Format dates for filename
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
     filename = f"{symbol}_1m_{start_str}:{end_str}.csv"
     csv_path = os.path.join(os.path.expanduser(data_dir), filename)
 
+    # Check for existing data
     if os.path.exists(csv_path):
         df_existing = pd.read_csv(csv_path)
         df_existing["timestamp"] = pd.to_datetime(df_existing["timestamp"])
@@ -124,6 +128,7 @@ def update_crypto_csv(symbol: str, start_date: datetime.datetime, end_date: date
     else:
         df_existing = pd.DataFrame()
 
+    # Fetch new data
     logging.info(f"Fetching {symbol} from {start_date} to {end_date}")
     df_new = fetch_binance_1m_data(symbol, start_date, end_date)
     if df_new.empty:
@@ -131,75 +136,16 @@ def update_crypto_csv(symbol: str, start_date: datetime.datetime, end_date: date
         print(f"{Fore.RED}No new data for {symbol}{Style.RESET_ALL}")
         return csv_path if os.path.exists(csv_path) else ""
 
+    # Validate and combine data
     df_new = validate_1m_data(df_new)
     df_combined = pd.concat([df_existing, df_new], ignore_index=True)
     df_combined = validate_1m_data(df_combined)
 
+    # Save updated CSV
     df_combined.to_csv(csv_path, index=False)
     logging.info(f"Updated {symbol} CSV saved to {csv_path}")
     print(f"{Fore.GREEN}✔ Saved {symbol} to {csv_path}{Style.RESET_ALL}")
     return csv_path
-
-def reprocess_csv(csv_path: str, start_date: Optional[datetime.datetime], end_date: Optional[datetime.datetime], timeframe: str, data_dir: str) -> str:
-    """
-    Reprocess a CSV file to filter by time range and resample to a specified timeframe.
-    
-    Args:
-        csv_path (str): Path to the input CSV file.
-        start_date (Optional[datetime.datetime]): Start date for filtering.
-        end_date (Optional[datetime.datetime]): End date for filtering.
-        timeframe (str): Target timeframe (e.g., '1min', '5min', '15min', '1H').
-        data_dir (str): Directory to save the output CSV.
-    
-    Returns:
-        str: Path to the reprocessed CSV file, or empty string if failed.
-    """
-    try:
-        df = pd.read_csv(csv_path)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        df = df.set_index('timestamp')
-        
-        # Filter by time range if specified
-        if start_date:
-            df = df[df.index >= start_date]
-        if end_date:
-            df = df[df.index <= end_date]
-        
-        if df.empty:
-            logging.warning(f"No data after filtering for {csv_path}")
-            print(f"{Fore.RED}No data after filtering for {csv_path}{Style.RESET_ALL}")
-            return ""
-        
-        # Resample to target timeframe
-        if timeframe != '1min':
-            df = df.resample(timeframe).agg({
-                'open': 'first',
-                'high': 'max',
-                'low': 'min',
-                'close': 'last',
-                'volume': 'sum',
-                'num_trades': 'sum'
-            }).dropna()
-        
-        # Reset index and prepare for saving
-        df = df.reset_index()
-        
-        # Generate new filename
-        symbol = os.path.basename(csv_path).split('_1m_')[0]
-        start_str = df['timestamp'].min().strftime("%Y-%m-%d")
-        end_str = df['timestamp'].max().strftime("%Y-%m-%d")
-        new_filename = f"{symbol}_{timeframe}_{start_str}:{end_str}.csv"
-        new_csv_path = os.path.join(data_dir, new_filename)
-        
-        # Save reprocessed CSV
-        df.to_csv(new_csv_path, index=False)
-        logging.info(f"Reprocessed CSV saved to {new_csv_path}")
-        print(f"{Fore.GREEN}✔ Reprocessed CSV saved to {new_csv_path}{Style.RESET_ALL}")
-        return new_csv_path
-    except Exception as e:
-        logging.error(f"Error reprocessing {csv_path}: {e}")
-        print(f"{Fore.RED}Error reprocessing {csv_path}: {e}{Style.RESET_ALL}")
-        return ""
 
 def fetch_multiple_cryptos(symbols: list, start_date: datetime.datetime, end_date: datetime.datetime, data_dir: str = "/home/madbob10/Dash/data/") -> list:
     """
@@ -210,6 +156,7 @@ def fetch_multiple_cryptos(symbols: list, start_date: datetime.datetime, end_dat
     total_symbols = len(symbols)
     saved_paths = []
     
+    # Process each symbol with counter
     for i, symbol in enumerate(symbols, 1):
         print(f"\n{Fore.MAGENTA}🚀 Processing {i}/{total_symbols}: {symbol} 🚀{Style.RESET_ALL}")
         try:
@@ -220,12 +167,14 @@ def fetch_multiple_cryptos(symbols: list, start_date: datetime.datetime, end_dat
         except Exception as e:
             logging.error(f"Error processing {symbol}: {e}")
             print(f"{Fore.RED}❌ Error with {symbol}: {e}{Style.RESET_ALL}")
-        time.sleep(1)
+        time.sleep(1)  # Avoid API overload
     return saved_paths
 
 if __name__ == "__main__":
+    # Configure logging
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     
+    # Define symbols and date range
     symbols = ["BTCUSDT", "XRPUSDT", "ETHUSDT", "XLMUSDT"]
     end_date = datetime.datetime.now()
     start_date = end_date - datetime.timedelta(days=7)
