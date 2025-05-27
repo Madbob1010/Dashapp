@@ -7,8 +7,8 @@ from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 import datetime
-import plotly.io as pio
 from datalinux2 import fetch_multiple_cryptos, update_crypto_csv, reprocess_csv
 from backtestrocm3 import run_backtest
 
@@ -17,11 +17,16 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 # Define directories
 DATA_DIR = "/home/madbob10/Dash/data/"
+BACKTEST_RESULTS_DIR = "/home/madbob10/Dash/data/backtest_results/"
 BACKTEST_PLOTS_DIR = "/home/madbob10/Dash/data/backtest_plots/"
 
 # Ensure directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(BACKTEST_RESULTS_DIR, exist_ok=True)
 os.makedirs(BACKTEST_PLOTS_DIR, exist_ok=True)
+
+# Store the latest plot state
+app.latest_plot = {'type': None, 'file': None, 'figure': None}
 
 # Layout with tabs
 app.layout = html.Div([
@@ -107,15 +112,11 @@ def render_content(tab):
         ])
     elif tab == 'data-view':
         return html.Div([
-            html.H3("View Cryptocurrency Data or Backtest Plots"),
-            html.Label("Select Data or Plot:"),
+            html.H3("View Cryptocurrency Data"),
+            html.Label("Select Cryptocurrency Data:"),
             dcc.Dropdown(
                 id='symbol-dropdown',
-                options=[
-                    {'label': f"CSV: {s}", 'value': f"csv:{s}"} for s in os.listdir(DATA_DIR) if s.endswith('.csv')
-                ] + [
-                    {'label': f"Plot: {s}", 'value': f"plot:{s}"} for s in os.listdir(BACKTEST_PLOTS_DIR) if s.endswith('.html')
-                ],
+                options=[{'label': s, 'value': s} for s in os.listdir(DATA_DIR) if s.endswith('.csv')],
                 value=None,
                 style={'width': '50%'}
             ),
@@ -202,52 +203,49 @@ def reprocess_data(n_clicks, csv_file, start_date, end_date, timeframe):
 # Callback to update the price chart
 @app.callback(
     Output('price-chart', 'figure'),
-    Input('symbol-dropdown', 'value')
+    Input('symbol-dropdown', 'value'),
+    Input('backtest-button', 'n_clicks')
 )
-def update_chart(selected_value):
-    if not selected_value:
-        return px.line(title="Select a dataset or plot to view")
+def update_chart(selected_file, backtest_n_clicks):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return px.line(title="Select a dataset or run a backtest to view")
     
-    try:
-        type_, filename = selected_value.split(':', 1)
-        if type_ == 'csv':
-            csv_path = os.path.join(DATA_DIR, filename)
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if trigger_id == 'symbol-dropdown' and selected_file:
+        csv_path = os.path.join(DATA_DIR, selected_file)
+        try:
             df = pd.read_csv(csv_path)
             df['timestamp'] = pd.to_datetime(df['timestamp'])
-            symbol = filename.split('_')[0]
+            symbol = selected_file.split('_')[0]
             fig = px.line(df, x='timestamp', y='close', title=f'Close Price for {symbol}')
             fig.update_layout(template='plotly_dark')
+            app.latest_plot = {'type': 'csv', 'file': csv_path, 'figure': fig}
             return fig
-        elif type_ == 'plot':
-            plot_path = os.path.join(BACKTEST_PLOTS_DIR, filename)
-            with open(plot_path, 'r') as f:
-                plot_html = f.read()
-            # Extract Plotly JSON from HTML
-            import re
-            json_match = re.search(r'Plotly\.newPlot\("[^"]+",\s*(\[.*?\]),', plot_html, re.DOTALL)
-            if json_match:
-                import json
-                plot_data = json.loads(json_match.group(1))
-                fig = go.Figure(data=plot_data)
-                fig.update_layout(template='plotly_dark')
-                return fig
-            return px.line(title=f"Error: Could not parse plot {filename}")
-    except Exception as e:
-        return px.line(title=f"Error loading {selected_value}: {str(e)}")
+        except Exception as e:
+            return px.line(title=f"Error loading {selected_file}: {str(e)}")
+    
+    elif trigger_id == 'backtest-button' and app.latest_plot['type'] == 'backtest':
+        return app.latest_plot['figure']
+    
+    return px.line(title="Select a dataset or run a backtest to view")
 
 # Callback to run backtest
 @app.callback(
     Output('backtest-status', 'children'),
+    Output('price-chart', 'figure', allow_duplicate=True),
     Input('backtest-button', 'n_clicks'),
     State('backtest-csv-dropdown', 'value'),
-    State('backtest-options', 'value')
+    State('backtest-options', 'value'),
+    prevent_initial_call=True
 )
 def run_backtest_callback(n_clicks, csv_files, options):
     if n_clicks == 0:
-        return "Select files and options, then click 'Run Backtest' to start."
+        return "Select files and options, then click 'Run Backtest' to start.", dash.no_update
     
     if not csv_files:
-        return "Error: Please select at least one CSV file or 'Entire File'."
+        return "Error: Please select at least one CSV file or 'Entire File'.", dash.no_update
     
     try:
         plot = 'plot' in options
@@ -258,26 +256,91 @@ def run_backtest_callback(n_clicks, csv_files, options):
             csv_files = [os.path.join(DATA_DIR, f) for f in csv_files]
         
         results = []
+        latest_fig = None
         for csv_file in csv_files:
             result = run_backtest(csv_file, plot=plot, use_lstm=use_lstm)
             if result[1] is not None:
                 symbol = os.path.basename(csv_file).split('_')[0]
-                best_key, best_return, plot_filepath = result[1], result[2], result[4]
+                best_key, best_return = result[1], result[2]
                 result_text = (
                     f"{symbol}: Best Parameters: EMA={best_key[0]}, RSI={best_key[1]}, RSI_Threshold={best_key[2]}, "
                     f"Return: {best_return*100:.2f}%"
                 )
-                if plot and plot_filepath:
-                    plot_filename = os.path.basename(plot_filepath)
-                    result_text += f" [View Plot](file://{plot_filepath})"
                 results.append(result_text)
+                
+                # Update latest plot if this is the last file and plot is enabled
+                if plot and csv_file == csv_files[-1]:
+                    df = pd.read_csv(csv_file)
+                    df['timestamp'] = pd.to_datetime(df['timestamp'])
+                    pf = result[3][best_key]
+                    best_ema = pd.Series(np.nan, index=df.index)
+                    best_rsi = pd.Series(np.nan, index=df.index)
+                    best_entries = (df['close'] > best_ema) & (best_rsi < best_key[2])
+                    best_exits = (df['close'] < best_ema) & (best_rsi > (100 - best_key[2]))
+                    if use_lstm and result[3].get('lstm_signals') is not None:
+                        best_entries = best_entries & result[3]['lstm_signals']
+                        best_exits = best_exits & ~result[3]['lstm_signals']
+                    
+                    fig = go.Figure()
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df.index,
+                            y=df['close'],
+                            mode='lines',
+                            name='Close Price',
+                            line=dict(color='blue')
+                        )
+                    )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df.index,
+                            y=pf.value(),
+                            mode='lines',
+                            name='Portfolio Value',
+                            line=dict(color='yellow'),
+                            yaxis="y2"
+                        )
+                    )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df.index[best_entries],
+                            y=df['close'][best_entries],
+                            mode='markers',
+                            name='Entries',
+                            marker=dict(symbol='circle', color='green', size=8)
+                        )
+                    )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df.index[best_exits],
+                            y=df['close'][best_exits],
+                            mode='markers',
+                            name='Exits',
+                            marker=dict(symbol='circle', color='red', size=8)
+                        )
+                    )
+                    fig.update_layout(
+                        height=600,
+                        width=900,
+                        title=f"Backtest Results for {symbol} (LSTM: {use_lstm})",
+                        showlegend=True,
+                        template='plotly_dark',
+                        yaxis=dict(title='Price (USD)'),
+                        yaxis2=dict(
+                            title='Portfolio Value (USD)',
+                            overlaying='y',
+                            side='right'
+                        )
+                    )
+                    latest_fig = fig
+                    app.latest_plot = {'type': 'backtest', 'file': csv_file, 'figure': fig}
             else:
                 symbol = os.path.basename(csv_file).split('_')[0]
                 results.append(f"{symbol}: Failed to process")
         
-        return html.Ul([html.Li(html.A(r, href=r.split('[')[1].split(']')[0][5:], target='_blank') if '[' in r else r) for r in results])
+        return html.Ul([html.Li(r) for r in results]), latest_fig or dash.no_update
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error: {str(e)}", dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)
