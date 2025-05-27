@@ -185,7 +185,7 @@ def reprocess_csv(csv_path: str, start_date: Optional[datetime.datetime], end_da
         df = df.reset_index()
         
         # Generate new filename
-        symbol = os.path.basename(csv_path).split('_')[0]
+        symbol = os.path.basename(csv_path).split('_1m_')[0]
         start_str = df['timestamp'].min().strftime("%Y-%m-%d")
         end_str = df['timestamp'].max().strftime("%Y-%m-%d")
         new_filename = f"{symbol}_{timeframe}_{start_str}:{end_str}.csv"

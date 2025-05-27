@@ -18,7 +18,7 @@ import pickle
 import platform
 import sys
 import glob
-import plotly.graph_objects as go
+import webbrowser
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -287,24 +287,25 @@ def vectorbt_backtest(df: pd.DataFrame, use_lstm: bool = False, param_range: Opt
 
     return portfolio, best_key, best_ema, best_rsi, lstm_signals, lstm_predictions
 
-def run_backtest(csv_file: str, plot: bool = False, use_lstm: bool = False) -> Tuple[str, Optional[Tuple], Optional[float], Dict, Optional[str]]:
+def run_backtest(csv_file: str, plot: bool = False, use_lstm: bool = False) -> Tuple[str, Optional[Tuple], Optional[float], Optional[dict]]:
     """
-    Run a backtest on a single CSV and return results for Dash integration.
+    Run a backtest on a single CSV file and return results for Dash integration.
     
     Args:
         csv_file (str): Path to the CSV file.
-        plot (bool): If True, generate and save a simplified plot.
-        use_lstm (bool): If True, include LSTM signals.
+        plot (bool): Whether to generate and save a plot.
+        use_lstm (bool): Whether to use LSTM signals.
     
     Returns:
-        Tuple: (csv_file, best_key, best_return, portfolio, plot_filepath)
+        Tuple: (csv_file, best_key, best_return, portfolio)
     """
+    logging.debug(f"Processing CSV: {csv_file}")
     try:
         if not os.path.exists(csv_file):
             raise FileNotFoundError(f"CSV file not found: {csv_file}")
         
         df = pd.read_csv(csv_file)
-        symbol = os.path.basename(csv_file).split('_')[0]
+        symbol = os.path.basename(csv_file).replace('.csv', '')
         logging.debug(f"CSV loaded for {symbol}, shape: {df.shape}")
         print(f"{Fore.CYAN}[Processing] {symbol}...{Style.RESET_ALL}")
         
@@ -312,7 +313,7 @@ def run_backtest(csv_file: str, plot: bool = False, use_lstm: bool = False) -> T
         if not all(col in df.columns for col in expected_columns):
             logging.warning(f"Missing expected columns in {csv_file}")
             print(f"{Fore.YELLOW}[WARN] Skipping {symbol}: Missing expected columns{Style.RESET_ALL}")
-            return csv_file, None, None, {}, None
+            return csv_file, None, None, None
         
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df = df.set_index('timestamp')
@@ -324,27 +325,18 @@ def run_backtest(csv_file: str, plot: bool = False, use_lstm: bool = False) -> T
         
         best_return = portfolio[best_key].total_return()
         
-        # Create directories for results and plots
-        results_dir = "/home/madbob10/Dash/data/backtest_results/"
-        plots_dir = "/home/madbob10/Dash/data/backtest_plots/"
-        os.makedirs(results_dir, exist_ok=True)
-        os.makedirs(plots_dir, exist_ok=True)
-        
-        # Save results
-        result_file = os.path.join(results_dir, f"results_{symbol}.pkl")
+        result_file = os.path.join(os.path.dirname(csv_file), f"results_{symbol}.pkl")
         with open(result_file, 'wb') as f:
             pickle.dump({'best_key': best_key, 'best_return': best_return, 'use_lstm': use_lstm}, f)
-        print(f"{Fore.GREEN}[INFO] Results saved to {result_file}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}[INFO] Results saved to {result_file} (pickle file){Style.RESET_ALL}")
         
-        # Generate and save simplified plot if requested
-        plot_filepath = None
         if plot:
-            print(f"{Fore.CYAN}[INFO] Generating simplified plot for {symbol}{Style.RESET_ALL}")
-            logging.debug("Generating simplified plot")
+            print(f"{Fore.CYAN}[INFO] Generating and saving plot for {symbol}{Style.RESET_ALL}")
+            logging.debug("Generating plot")
             pf = portfolio[best_key]
             
             if pf.trades.count() == 0:
-                logging.warning("No trades generated for the best parameters.")
+                logging.warning("No trades generated for the best parameters. Plot may lack order markers.")
                 print(f"{Fore.YELLOW}[WARN] No trades generated for {symbol}{Style.RESET_ALL}")
             
             best_entries = (df['close'] > best_ema) & (best_rsi < best_key[2])
@@ -353,82 +345,132 @@ def run_backtest(csv_file: str, plot: bool = False, use_lstm: bool = False) -> T
                 best_entries = best_entries & lstm_signals
                 best_exits = best_exits & ~lstm_signals
             
-            # Simplified plot: close price, portfolio value, entries/exits
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=df.index,
-                    y=df['close'],
+            from plotly.subplots import make_subplots
+            fig = make_subplots(
+                rows=3, cols=1,
+                subplot_titles=(
+                    'Price and Portfolio Value',
+                    'EMA and RSI Indicators',
+                    'LSTM Predictions and Signals'
+                ),
+                vertical_spacing=0.1,
+                specs=[[{"secondary_y": True}], [{"secondary_y": True}], [{}]]
+            )
+            
+            fig.add_scatter(
+                x=df.index,
+                y=df['close'],
+                mode='lines',
+                name='Close Price',
+                line=dict(color='white'),
+                row=1, col=1
+            )
+            fig.add_scatter(
+                x=df.index,
+                y=pf.value(),
+                mode='lines',
+                name='Portfolio Value',
+                line=dict(color='yellow'),
+                row=1, col=1,
+                secondary_y=True
+            )
+            fig.add_scatter(
+                x=df.index[best_entries],
+                y=df['close'][best_entries],
+                mode='markers',
+                name='Entries',
+                marker=dict(symbol='circle', color='green', size=8),
+                row=1, col=1
+            )
+            fig.add_scatter(
+                x=df.index[best_exits],
+                y=df['close'][best_exits],
+                mode='markers',
+                name='Exits',
+                marker=dict(symbol='circle', color='red', size=8),
+                row=1, col=1
+            )
+            
+            fig.add_scatter(
+                x=df.index,
+                y=df['close'],
+                mode='lines',
+                name='Close Price',
+                line=dict(color='white'),
+                row=2, col=1
+            )
+            fig.add_scatter(
+                x=best_ema.index,
+                y=best_ema,
+                mode='lines',
+                name=f'EMA {best_key[0]}',
+                line=dict(color='orange'),
+                row=2, col=1
+            )
+            fig.add_scatter(
+                x=best_rsi.index,
+                y=best_rsi,
+                mode='lines',
+                name=f'RSI {best_key[1]}',
+                line=dict(color='purple'),
+                row=2, col=1,
+                secondary_y=True
+            )
+            
+            if use_lstm and lstm_predictions is not None and not lstm_predictions.isna().all():
+                fig.add_scatter(
+                    x=lstm_predictions.index,
+                    y=lstm_predictions,
                     mode='lines',
-                    name='Close Price',
-                    line=dict(color='blue')
+                    name='LSTM Predictions',
+                    line=dict(color='magenta', dash='dash'),
+                    row=3, col=1
                 )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=df.index,
-                    y=pf.value(),
-                    mode='lines',
-                    name='Portfolio Value',
-                    line=dict(color='yellow'),
-                    yaxis="y2"
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=df.index[best_entries],
-                    y=df['close'][best_entries],
-                    mode='markers',
-                    name='Entries',
-                    marker=dict(symbol='circle', color='green', size=8)
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=df.index[best_exits],
-                    y=df['close'][best_exits],
-                    mode='markers',
-                    name='Exits',
-                    marker=dict(symbol='circle', color='red', size=8)
-                )
-            )
+                if lstm_signals.sum() > 0:
+                    fig.add_scatter(
+                        x=lstm_signals.index[lstm_signals],
+                        y=df['close'][lstm_signals],
+                        mode='markers',
+                        name='LSTM Buy Signals',
+                        marker=dict(symbol='triangle-up', color='cyan', size=10),
+                        row=3, col=1
+                    )
             
             fig.update_layout(
-                height=600,
-                width=900,
+                height=1000,
+                width=1400,
                 title=f"Backtest Results for {symbol} (LSTM: {use_lstm})",
                 showlegend=True,
-                template='plotly_dark',
-                yaxis=dict(title='Price (USD)'),
-                yaxis2=dict(
-                    title='Portfolio Value (USD)',
-                    overlaying='y',
-                    side='right'
-                )
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                template='plotly_dark'
             )
+            fig.update_yaxes(title_text="Price (USD)", row=1, col=1, secondary_y=False)
+            fig.update_yaxes(title_text="Portfolio Value (USD)", row=1, col=1, secondary_y=True)
+            fig.update_yaxes(title_text="Price / EMA", row=2, col=1, secondary_y=False)
+            fig.update_yaxes(title_text="RSI", row=2, col=1, secondary_y=True)
+            fig.update_yaxes(title_text="Price / LSTM Signals", row=3, col=1)
             
-            # Save plot
-            plot_filename = f"backtest_{symbol}.html"
-            plot_filepath = os.path.join(plots_dir, plot_filename)
+            plot_filename = f"portfolio_{symbol}.html"
+            plot_path = os.path.join(os.path.dirname(csv_file), plot_filename)
             try:
-                fig.write_html(plot_filepath)
-                print(f"{Fore.GREEN}[INFO] Plot saved as {plot_filepath}{Style.RESET_ALL}")
+                fig.write_html(plot_path)
+                print(f"{Fore.GREEN}[INFO] Plot saved as {plot_path}{Style.RESET_ALL}")
             except Exception as e:
-                logging.error(f"Failed to save plot at {plot_filepath}: {e}")
+                logging.error(f"Failed to save plot at {plot_path}: {e}")
                 print(f"{Fore.RED}[ERROR] Could not save plot: {e}{Style.RESET_ALL}")
         
-        return csv_file, best_key, best_return, portfolio, plot_filepath
+        return csv_file, best_key, best_return, portfolio
     except Exception as e:
         logging.error(f"Error processing {csv_file}: {e}")
         print(f"{Fore.RED}[ERROR] Failed to process {csv_file}: {e}{Style.RESET_ALL}")
-        return csv_file, None, None, {}, None
+        return csv_file, None, None, None
 
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Run backtest on CSV files from Binance data fetch. Requires Linux for ROCm support.")
-    parser.add_argument("--plot", action="store_true", help="Generate and save simplified Plotly HTML plots")
-    parser.add_argument("--use_lstm", action="store_true", help="Include LSTM model predictions in the backtest signals")
+    parser.add_argument("--plot", action="store_true", help="Generate, save, and open Plotly HTML plots in the browser (default: False)")
+    parser.add_argument("--use_lstm", action="store_true", help="Include LSTM model predictions in the backtest signals (default: False)")
     args = parser.parse_args()
     
     data_dir = "/home/madbob10/Dash/data/"
@@ -447,11 +489,11 @@ if __name__ == "__main__":
         results.append(result)
     
     print(f"\n{Fore.MAGENTA}=== Backtest Summary ==={Style.RESET_ALL}")
-    for csv_file, best_key, best_return, portfolio, plot_filepath in results:
-        symbol = os.path.basename(csv_file).split('_')[0]
+    for csv_file, best_key, best_return, portfolio in results:
+        symbol = os.path.basename(csv_file).replace('.csv', '')
         if best_key is None or best_return is None:
             print(f"{Fore.RED}[{symbol}] Failed to process{Style.RESET_ALL}")
         else:
             print(f"{Fore.GREEN}[{symbol}] Best Parameters: EMA={best_key[0]}, RSI={best_key[1]}, RSI_Threshold={best_key[2]}, Return: {best_return*100:.2f}%{Style.RESET_ALL}")
     
-    print(f"{Fore.GREEN}🎉 Backtesting complete! Check results in {data_dir}backtest_results/ and plots in {data_dir}backtest_plots/{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}🎉 Backtesting complete! Check results and plots in {data_dir}{Style.RESET_ALL}")
