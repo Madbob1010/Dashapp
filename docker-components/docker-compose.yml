@@ -1,15 +1,23 @@
+version: '3.8'
+
 services:
-  dash-app:
-    build: .
+  trading-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-dashboard
     ports:
       - "8050:8050"
     volumes:
-      - ./data:/app/data
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
-    deploy:
-      resources:
-        limits:
-          cpus: "4"  # Use 4 of 8 cores
-          memory: 16g  # Cap at 16 GB RAM
+      - ./data:/home/madbob10/Dash/data
+      # For development (uncomment to map source files for live editing)
+      # - ./backtestrocm3.py:/app/backtestrocm3.py
+      # - ./datalinux2.py:/app/datalinux2.py
+      # - ./trading_dashboard.py:/app/trading_dashboard.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Optional: GPU passthrough for ROCm (uncomment if needed)
+    # devices:
+    #  - /dev/kfd:/dev/kfd
+    #  - /dev/dri:/dev/dri
+    restart: unless-stopped

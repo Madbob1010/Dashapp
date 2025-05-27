@@ -1,0 +1,27 @@
+name: trading_env_mamba
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.16
+  - pytorch=2.5.1=py310_rocm6.3.4
+  - torchvision=0.20.1=py310_rocm6.3.4
+  - torchaudio=2.5.1=py310_rocm6.3.4
+  - pandas=2.2.3
+  - scikit-learn=1.6.1
+  - matplotlib=3.10.0
+  - ta-lib=0.5.1
+  - pip=25.1
+  - pip:
+      - aiodns==3.4.0
+      - aiohttp==3.12.1
+      - ccxt==4.4.85
+      - dash==3.0.4
+      - dateparser==1.2.1
+      - flask==3.0.3
+      - numpy==1.23.5
+      - plotly==5.24.1
+      - vectorbt==0.27.3
+      - torchtriton==2.0.0
+prefix: /home/madbob10/miniforge3/envs/trading_env_mamba
