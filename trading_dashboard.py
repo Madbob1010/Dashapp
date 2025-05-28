@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import datetime
-from datalinux2 import fetch_multiple_cryptos, update_crypto_csv, reprocess_csv
+from trading_bot.datalinux2 import fetch_multiple_cryptos, update_crypto_csv, reprocess_csv
 from backtestrocm3 import run_backtest
 
 # Initialize Dash app with callback exception suppression
