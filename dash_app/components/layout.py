@@ -2,6 +2,7 @@ from dash import dcc, html
 import datetime
 import os
 from dash_app.config.settings import DATA_DIR
+from trading_bot.config import settings
 
 def get_layout():
     """Return the Dash app layout."""
