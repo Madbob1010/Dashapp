@@ -6,15 +6,18 @@ from sklearn.preprocessing import MinMaxScaler
 from trading_bot.config.settings import LSTM_LOOKBACK, LSTM_EPOCHS, LSTM_BATCH_SIZE
 import logging
 
-def create_lstm_model(input_size=1, hidden_size=32, num_layers=1):
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def create_lstm_model(input_size=1, hidden_size=16, num_layers=1):
     """Create a simplified LSTM model in PyTorch."""
     try:
         class LSTMModel(nn.Module):
-            def __init__(self, input_size=1, hidden_size=32, num_layers=1):
+            def __init__(self, input_size=1, hidden_size=16, num_layers=1):
                 super(LSTMModel, self).__init__()
-                self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
-                self.fc1 = nn.Linear(hidden_size, 16)
-                self.fc2 = nn.Linear(16, 1)
+                self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.1)
+                self.fc1 = nn.Linear(hidden_size, 8)
+                self.fc2 = nn.Linear(8, 1)
 
             def forward(self, x):
                 _, (hn, _) = self.lstm(x)
@@ -23,6 +26,7 @@ def create_lstm_model(input_size=1, hidden_size=32, num_layers=1):
                 return out
 
         model = LSTMModel(input_size=input_size, hidden_size=hidden_size)
+        logging.debug("LSTM model created successfully")
         return model
     except Exception as e:
         logging.error(f"LSTM model creation failed: {e}")
@@ -54,6 +58,7 @@ def prepare_lstm_data(close: np.ndarray, lookback: int = LSTM_LOOKBACK, train_sp
         X_test = torch.tensor(X_test, dtype=torch.float32)
         y_test = torch.tensor(y_test, dtype=torch.float32)
         
+        logging.debug(f"Prepared data: X_train={X_train.shape}, X_test={X_test.shape}")
         return X_train, y_train, X_test, y_test, scaler
     except Exception as e:
         logging.error(f"LSTM data preparation failed: {e}")
@@ -66,13 +71,18 @@ def train_lstm_model(close: np.ndarray, lookback: int = LSTM_LOOKBACK, epochs: i
         start_index = lookback + len(X_train) + 1
         
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model = create_lstm_model(input_size=1, hidden_size=32).to(device)
+        logging.info(f"Using device: {device}")
+        model = create_lstm_model(input_size=1, hidden_size=16).to(device)
         optimizer = optim.Adam(model.parameters())
         criterion = nn.MSELoss()
 
         model.train()
+        best_loss = float('inf')
+        patience = 5
+        patience_counter = 0
         for epoch in range(epochs):
             for i in range(0, len(X_train), batch_size):
+                logging.debug(f"Epoch {epoch+1}/{epochs}, Batch {i//batch_size + 1}")
                 batch_X = X_train[i:i+batch_size].to(device)
                 batch_y = y_train[i:i+batch_size].to(device)
                 
@@ -82,7 +92,16 @@ def train_lstm_model(close: np.ndarray, lookback: int = LSTM_LOOKBACK, epochs: i
                 loss.backward()
                 optimizer.step()
             
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
+            loss_value = loss.item()
+            print(f"Epoch {epoch+1}/{epochs}, Loss: {loss_value:.4f}")
+            if loss_value < best_loss:
+                best_loss = loss_value
+                patience_counter = 0
+            else:
+                patience_counter += 1
+            if patience_counter >= patience:
+                print(f"Early stopping at epoch {epoch+1}")
+                break
         
         model.eval()
         with torch.no_grad():
@@ -90,6 +109,7 @@ def train_lstm_model(close: np.ndarray, lookback: int = LSTM_LOOKBACK, epochs: i
             predictions = model(X_test).cpu().numpy()
         predictions = scaler.inverse_transform(predictions)
         
+        logging.info(f"LSTM training completed: {len(predictions)} predictions")
         return predictions, start_index
     except Exception as e:
         logging.error(f"LSTM training/prediction failed: {e}")
