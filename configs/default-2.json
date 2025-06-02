@@ -1,0 +1,45 @@
+{
+    "paths": {
+        "data_dir": "/home/madbob10/Dash/data",
+        "results_dir": "/home/madbob10/Dash/data/backtest_results",
+        "plots_dir": "/home/madbob10/Dash/data/backtest_plots"
+    },
+    "backtest": {
+        "param_range": {
+            "ema_length": {
+                "start": 15,
+                "end": 40,
+                "step": 5
+            },
+            "rsi_length": {
+                "start": 15,
+                "end": 20,
+                "step": 5
+            },
+            "rsi_threshold": {
+                "start": 30,
+                "end": 55,
+                "step": 5
+            }
+        }
+    },
+    "lstm": {
+        "lookback": 15,
+        "epochs": 5,
+        "batch_size": 128,
+        "enabled": true
+    },
+    "plotting": {
+        "height": 600,
+        "width": 900,
+        "template": "plotly_dark",
+        "enabled": true
+    },
+    "vectorbt": {
+        "plotting": {
+            "layout": {
+                "template": "plotly_dark"
+            }
+        }
+    }
+}

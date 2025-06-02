@@ -5,9 +5,9 @@ from pathlib import Path
 
 # Define color scheme for consistency
 COLORS = {
-    'background': "#000000",  # Black background
-    'text': "#FFFFFF",        # White text
-    'accent': "#000000",      # Gray accent for borders and elements
+    'background': '#000000',  # Black background
+    'text': '#FFFFFF',        # White text
+    'accent': '#333333',      # Gray accent for borders and elements
     'border': '1px solid #333333'
 }
 
@@ -16,12 +16,12 @@ def get_data_view_content():
     config_dir = Path('/home/madbob10/Dash/configs')
     config_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
 
-    # Simplified dropdown style without custom CSS
+    # Simplified dropdown style with black text
     dropdown_style = {
         'width': '50%',
         'border': COLORS['border'],
-        'backgroundColor': COLORS['accent'],  # Gray background for dropdown
-        'color': COLORS['text']              # White text for dropdown
+        'backgroundColor': COLORS['accent'],
+        'color': '#000000'  # Black text for dropdown
     }
 
     return html.Div([

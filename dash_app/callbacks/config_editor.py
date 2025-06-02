@@ -5,6 +5,14 @@ import traceback
 from pathlib import Path
 import logging
 
+# Define color scheme for consistency
+COLORS = {
+    'background': '#000000',  # Black background
+    'text': '#FFFFFF',        # White text
+    'accent': '#333333',      # Gray accent for borders and elements
+    'border': '1px solid #333333'
+}
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -61,7 +69,15 @@ def register_callback(app):
         inputs = []
         for key, value in flat_config.items():
             input_id = f"config-input-{key}"
-            label_style = {'color': 'white', 'margin-right': '10px'}
+            label_style = {'color': COLORS['text'], 'margin-right': '10px'}
+            input_style = {
+                'width': '70%',
+                'backgroundColor': COLORS['accent'],
+                'color': COLORS['text'],
+                'border': COLORS['border'],
+                'padding': '5px'
+            }
+
             if isinstance(value, bool):
                 inputs.append(
                     html.Div([
@@ -70,7 +86,7 @@ def register_callback(app):
                             id=input_id,
                             options=[{'label': 'Enabled', 'value': True}],
                             value=[True] if value else [],
-                            style={'display': 'inline-block', 'color': 'white'}
+                            style={'display': 'inline-block', 'color': COLORS['text']}
                         )
                     ], style={'margin': '5px'})
                 )
@@ -82,7 +98,7 @@ def register_callback(app):
                             id=input_id,
                             type='text',
                             value=json.dumps(value),
-                            style={'width': '70%', 'background-color': '#34495e', 'color': 'white', 'border': 'none', 'padding': '5px'}
+                            style=input_style
                         )
                     ], style={'margin': '5px'})
                 )
@@ -94,7 +110,7 @@ def register_callback(app):
                             id=input_id,
                             type='text',
                             value=str(value),
-                            style={'width': '70%', 'background-color': '#34495e', 'color': 'white', 'border': 'none', 'padding': '5px'}
+                            style=input_style
                         )
                     ], style={'margin': '5px'})
                 )
@@ -109,7 +125,7 @@ def register_callback(app):
     )
     def save_config(n_clicks, config_name, editor_children):
         if not n_clicks or not config_name:
-            return html.P("Enter a config name and click Save", style={'color': 'white'})
+            return html.P("Enter a config name and click Save", style={'color': COLORS['text']})
 
         if not config_name.endswith('.json'):
             config_name += '.json'
@@ -143,4 +159,4 @@ def register_callback(app):
             return html.P(f"Config saved as {config_name}", style={'color': 'green'})
         except Exception as e:
             logging.error(f"Failed to save config {config_name}: {e}\n{traceback.format_exc()}")
-            return html.P(f"Error saving config: {e}", style={'color': 'red'}) 
+            return html.P(f"Error saving config: {e}", style={'color': 'red'})
