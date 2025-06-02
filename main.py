@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path('/home/madbob10/Dash')))
 
 from dash import Dash
-from dash_app.components.layout import get_layout
+from dash_app.components.layout.global_vars import get_layout
 from dash_app.callbacks import callbacks
 
 app = Dash(__name__, suppress_callback_exceptions=True)
