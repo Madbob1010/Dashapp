@@ -1,0 +1,9 @@
+aiohttp==3.12.1
+ccxt==4.4.85
+dash==3.0.4
+plotly==5.24.1
+vectorbt==0.27.3
+pyo3==0.22.5
+torch==2.2.2+rocm5.6
+torchaudio==2.2.2+rocm5.6
+torchvision==0.17.2+rocm5.6

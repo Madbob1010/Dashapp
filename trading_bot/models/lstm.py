@@ -1,116 +1,141 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from trading_bot.config.settings import LSTM_LOOKBACK, LSTM_EPOCHS, LSTM_BATCH_SIZE
 import logging
+from torch.utils.data import DataLoader, TensorDataset
+from trading_bot.config.settings import LSTM_LOOKBACK, LSTM_EPOCHS, LSTM_BATCH_SIZE
+import traceback
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('/home/madbob10/Dash/data/lstm.log'),
+        logging.StreamHandler()
+    ]
+)
 
-def create_lstm_model(input_size=1, hidden_size=16, num_layers=1):
-    """Create a simplified LSTM model in PyTorch."""
+class LSTMModel(nn.Module):
+    def __init__(self, input_size=1, hidden_size=8, num_layers=1, dropout=0.0):
+        super(LSTMModel, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            dropout=dropout,
+            batch_first=True
+        )
+        self.fc = nn.Linear(hidden_size, 1)
+    
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.fc(out[:, -1, :])
+        return out
+
+def train_lstm_model(data: np.ndarray, lookback: int = LSTM_LOOKBACK, epochs: int = LSTM_EPOCHS, batch_size: int = LSTM_BATCH_SIZE):
+    """Train LSTM model and return predictions."""
+    logging.info("Training LSTM model")
+    
+    # Force CPU to avoid issues
+    device = torch.device("cpu")
+    logging.info("Forcing CPU training for stability")
+    
     try:
-        class LSTMModel(nn.Module):
-            def __init__(self, input_size=1, hidden_size=16, num_layers=1):
-                super(LSTMModel, self).__init__()
-                self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.1)
-                self.fc1 = nn.Linear(hidden_size, 8)
-                self.fc2 = nn.Linear(8, 1)
-
-            def forward(self, x):
-                _, (hn, _) = self.lstm(x)
-                out = self.fc1(hn[-1])
-                out = self.fc2(out)
-                return out
-
-        model = LSTMModel(input_size=input_size, hidden_size=hidden_size)
-        logging.debug("LSTM model created successfully")
-        return model
-    except Exception as e:
-        logging.error(f"LSTM model creation failed: {e}")
-        raise
-
-def prepare_lstm_data(close: np.ndarray, lookback: int = LSTM_LOOKBACK, train_split: float = 0.8):
-    """Prepare data for LSTM training and prediction."""
-    try:
-        if len(close) < lookback + 1:
-            raise ValueError(f"Insufficient data: {len(close)} rows, need at least {lookback + 1}")
+        # Validate input data
+        if len(data) < lookback + 1:
+            logging.error(f"Insufficient data for LSTM training: {len(data)} rows, need at least {lookback + 1}")
+            return None, lookback
         
-        scaler = MinMaxScaler()
-        close_scaled = scaler.fit_transform(close.reshape(-1, 1))
+        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
+            logging.error("Input data contains NaN or infinite values")
+            return None, lookback
         
+        # Normalize data with clipping
+        data_mean = np.mean(data)
+        data_std = np.std(data)
+        if data_std == 0:
+            logging.error("Data has zero standard deviation")
+            return None, lookback
+        data_normalized = np.clip((data - data_mean) / data_std, -10, 10)
+        
+        # Prepare data
         X, y = [], []
-        for i in range(lookback, len(close_scaled) - 1):
-            X.append(close_scaled[i-lookback:i])
-            y.append(close_scaled[i+1])
-        X, y = np.array(X), np.array(y)
+        for i in range(lookback, len(data_normalized)):
+            X.append(data_normalized[i-lookback:i])
+            y.append(data_normalized[i])
+        logging.info(f"Prepared {len(X)} samples for LSTM training")
+        if not X or not y:
+            logging.error("No valid sequences for LSTM training")
+            return None, lookback
         
-        train_size = int(len(X) * train_split)
-        if train_size < 1 or len(X) - train_size < 1:
-            raise ValueError("Train/test split resulted in empty sets")
-        X_train, y_train = X[:train_size], y[:train_size]
-        X_test, y_test = X[train_size:], y[train_size:]
+        X = np.array(X).reshape(-1, lookback, 1)
+        y = np.array(y).reshape(-1, 1)
+        logging.info(f"X shape: {X.shape}, y shape: {y.shape}")
         
-        X_train = torch.tensor(X_train, dtype=torch.float32)
-        y_train = torch.tensor(y_train, dtype=torch.float32)
-        X_test = torch.tensor(X_test, dtype=torch.float32)
-        y_test = torch.tensor(y_test, dtype=torch.float32)
+        # Convert to tensors
+        X_tensor = torch.tensor(X, dtype=torch.float32)
+        y_tensor = torch.tensor(y, dtype=torch.float32)
+        logging.info(f"X_tensor shape: {X_tensor.shape}, y_tensor shape: {y_tensor.shape}")
         
-        logging.debug(f"Prepared data: X_train={X_train.shape}, X_test={X_test.shape}")
-        return X_train, y_train, X_test, y_test, scaler
-    except Exception as e:
-        logging.error(f"LSTM data preparation failed: {e}")
-        raise
-
-def train_lstm_model(close: np.ndarray, lookback: int = LSTM_LOOKBACK, epochs: int = LSTM_EPOCHS, batch_size: int = LSTM_BATCH_SIZE):
-    """Train LSTM model and return predictions with starting index."""
-    try:
-        X_train, y_train, X_test, _, scaler = prepare_lstm_data(close, lookback)
-        start_index = lookback + len(X_train) + 1
+        # Create DataLoader
+        dataset = TensorDataset(X_tensor, y_tensor)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logging.info(f"Using device: {device}")
-        model = create_lstm_model(input_size=1, hidden_size=16).to(device)
-        optimizer = optim.Adam(model.parameters())
-        criterion = nn.MSELoss()
-
+        # Initialize model
+        try:
+            model = LSTMModel(num_layers=1, hidden_size=8, dropout=0.0).to(device)
+            criterion = nn.MSELoss()
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+            logging.info("Model initialized successfully")
+        except Exception as e:
+            logging.error(f"Model initialization failed: {e}\n{traceback.format_exc()}")
+            return None, lookback
+        
+        # Train with error handling
         model.train()
-        best_loss = float('inf')
-        patience = 5
-        patience_counter = 0
         for epoch in range(epochs):
-            for i in range(0, len(X_train), batch_size):
-                logging.debug(f"Epoch {epoch+1}/{epochs}, Batch {i//batch_size + 1}")
-                batch_X = X_train[i:i+batch_size].to(device)
-                batch_y = y_train[i:i+batch_size].to(device)
-                
+            total_loss = 0
+            for batch_X, batch_y in dataloader:
+                batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+                # Reduced batch logging for brevity
+                if epoch == 0:
+                    logging.info(f"Batch shapes: X={batch_X.shape}, y={batch_y.shape}")
                 optimizer.zero_grad()
-                outputs = model(batch_X)
-                loss = criterion(outputs.squeeze(), batch_y)
-                loss.backward()
-                optimizer.step()
-            
-            loss_value = loss.item()
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {loss_value:.4f}")
-            if loss_value < best_loss:
-                best_loss = loss_value
-                patience_counter = 0
-            else:
-                patience_counter += 1
-            if patience_counter >= patience:
-                print(f"Early stopping at epoch {epoch+1}")
-                break
+                try:
+                    outputs = model(batch_X)
+                    loss = criterion(outputs, batch_y)
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        logging.error(f"Invalid loss in epoch {epoch + 1}: {loss.item()}")
+                        return None, lookback
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    optimizer.step()
+                    total_loss += loss.item()
+                except Exception as e:
+                    logging.error(f"Training error in epoch {epoch + 1}: {e}\n{traceback.format_exc()}")
+                    return None, lookback
+            logging.info(f"Epoch {epoch + 1}/{epochs} completed, Loss: {total_loss / len(dataloader):.4f}")
         
+        # Predict
         model.eval()
         with torch.no_grad():
-            X_test = X_test.to(device)
-            predictions = model(X_test).cpu().numpy()
-        predictions = scaler.inverse_transform(predictions)
+            try:
+                X_tensor = X_tensor.to(device)
+                predictions = model(X_tensor).cpu().numpy()
+                predictions = predictions * data_std + data_mean
+                logging.info(f"Predictions shape: {predictions.shape}")
+            except Exception as e:
+                logging.error(f"Prediction error: {e}\n{traceback.format_exc()}")
+                return None, lookback
         
-        logging.info(f"LSTM training completed: {len(predictions)} predictions")
-        return predictions, start_index
+        logging.info("LSTM training completed successfully")
+        return predictions, lookback
+    
     except Exception as e:
-        logging.error(f"LSTM training/prediction failed: {e}")
-        raise
+        logging.error(f"LSTM training failed: {e}\n{traceback.format_exc()}")
+        return None, lookback
