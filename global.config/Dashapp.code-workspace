@@ -1,0 +1,10 @@
+{
+    "folders": [
+        {
+            "path": ".."
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "/home/madbob10/miniconda3/envs/py310/bin/python"
+    }
+}

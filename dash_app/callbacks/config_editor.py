@@ -1,10 +1,11 @@
-from dash import Input, Output, State, html, dcc, dash
+from dash import Input, Output, State, html, dcc
 import json
 import os
 import traceback
 from pathlib import Path
 import logging
 
+# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -15,6 +16,7 @@ logging.basicConfig(
 )
 
 def flatten_config(config, prefix=''):
+    """Flatten a nested config dictionary into a single-level dictionary."""
     flat_config = {}
     for key, value in config.items():
         new_key = f"{prefix}{key}" if prefix else key
@@ -25,6 +27,7 @@ def flatten_config(config, prefix=''):
     return flat_config
 
 def unflatten_config(flat_config):
+    """Convert a flattened config dictionary back to a nested structure."""
     config = {}
     for key, value in flat_config.items():
         parts = key.split('.')
@@ -36,7 +39,8 @@ def unflatten_config(flat_config):
         current[parts[-1]] = value
     return config
 
-def register_callbacks(app):
+def register_callback(app):
+    """Register Dash callbacks for the config editor."""
     @app.callback(
         Output('config-editor', 'children'),
         Input('config-dropdown', 'value')
@@ -104,7 +108,7 @@ def register_callbacks(app):
         State('config-editor', 'children')
     )
     def save_config(n_clicks, config_name, editor_children):
-        if n_clicks == 0 or not config_name:
+        if not n_clicks or not config_name:
             return html.P("Enter a config name and click Save", style={'color': 'white'})
 
         if not config_name.endswith('.json'):
@@ -118,7 +122,7 @@ def register_callbacks(app):
                 value = child.get('props', {}).get('children', [{}])[1].get('props', {}).get('value', None)
                 if input_id.startswith('config-input-'):
                     key = input_id.replace('config-input-', '')
-                    if isinstance(value, list):
+                    if isinstance(value, list):  # Checklist for booleans
                         flat_config[key] = bool(value)
                     else:
                         try:
