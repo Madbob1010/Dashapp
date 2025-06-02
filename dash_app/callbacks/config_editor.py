@@ -143,4 +143,4 @@ def register_callback(app):
             return html.P(f"Config saved as {config_name}", style={'color': 'green'})
         except Exception as e:
             logging.error(f"Failed to save config {config_name}: {e}\n{traceback.format_exc()}")
-            return html.P(f"Error saving config: {e}", style={'color': 'red'})
+            return html.P(f"Error saving config: {e}", style={'color': 'red'}) 
