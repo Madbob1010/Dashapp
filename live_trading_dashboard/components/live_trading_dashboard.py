@@ -1,4 +1,4 @@
-from dash import dcc, html
+from dash import dcc, html 
 import datetime
 import os
 from trading_bot.config import settings

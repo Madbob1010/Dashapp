@@ -1,0 +1,70 @@
+2025-06-02 21:57:29,618 - DEBUG - get_layout called
+2025-06-02 21:57:29,661 - INFO - Successfully registered callbacks from render_content
+2025-06-02 21:57:29,661 - INFO - Successfully registered callbacks from update_dropdowns
+2025-06-02 21:57:29,784 - INFO - NumExpr defaulting to 16 threads.
+2025-06-02 21:57:29,852 - INFO - Successfully registered callbacks from fetch_data
+2025-06-02 21:57:29,853 - INFO - Successfully registered callbacks from reprocess_data
+2025-06-02 21:57:29,971 - INFO - Successfully registered callbacks from update_chart
+2025-06-02 21:57:31,802 - INFO - Successfully registered callbacks from run_backtest
+2025-06-02 21:57:31,802 - INFO - Successfully registered callbacks from config_editor
+2025-06-02 21:57:31,802 - INFO - Dash is running on http://127.0.0.1:8050/
+
+2025-06-02 21:57:31,803 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8050
+2025-06-02 21:57:31,803 - INFO - [33mPress CTRL+C to quit[0m
+2025-06-02 21:57:32,954 - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 915, in full_dispatch_request
+    rv = self.preprocess_request()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 1291, in preprocess_request
+    rv = self.ensure_sync(before_func)()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/dash/dash.py", line 1457, in _setup_server
+    raise DuplicateCallback(
+dash.exceptions.DuplicateCallback: The callback `tabs-content.children` provided with `dash.callback` was already assigned with `app.callback`.
+2025-06-02 21:57:32,955 - INFO - 127.0.0.1 - - [02/Jun/2025 21:57:32] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-02 21:57:37,820 - INFO - Successfully registered callbacks from render_content
+2025-06-02 21:57:37,821 - INFO - Successfully registered callbacks from update_dropdowns
+2025-06-02 21:57:37,928 - INFO - NumExpr defaulting to 16 threads.
+2025-06-02 21:57:38,000 - INFO - Successfully registered callbacks from fetch_data
+2025-06-02 21:57:38,000 - INFO - Successfully registered callbacks from reprocess_data
+2025-06-02 21:57:38,114 - INFO - Successfully registered callbacks from update_chart
+2025-06-02 21:57:39,918 - INFO - Successfully registered callbacks from run_backtest
+2025-06-02 21:57:39,918 - INFO - Successfully registered callbacks from config_editor
+2025-06-02 21:57:39,919 - INFO - Dash is running on http://127.0.0.1:8051/
+
+2025-06-02 21:57:39,920 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8051
+2025-06-02 21:57:39,920 - INFO - [33mPress CTRL+C to quit[0m
+2025-06-02 21:57:40,917 - ERROR - Exception on / [GET]
+Traceback (most recent call last):
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 915, in full_dispatch_request
+    rv = self.preprocess_request()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/flask/app.py", line 1291, in preprocess_request
+    rv = self.ensure_sync(before_func)()
+  File "/home/madbob10/miniconda3/envs/py310/lib/python3.10/site-packages/dash/dash.py", line 1457, in _setup_server
+    raise DuplicateCallback(
+dash.exceptions.DuplicateCallback: The callback `tabs-content.children` provided with `dash.callback` was already assigned with `app.callback`.
+2025-06-02 21:57:40,918 - INFO - 127.0.0.1 - - [02/Jun/2025 21:57:40] "[35m[1mGET / HTTP/1.1[0m" 500 -
+2025-06-02 21:57:41,085 - INFO - 127.0.0.1 - - [02/Jun/2025 21:57:41] "GET /favicon.ico HTTP/1.1" 200 -
+2025-06-02 21:57:53,576 - DEBUG - get_layout called
+2025-06-02 21:57:53,611 - INFO - Successfully registered callbacks from render_content
+2025-06-02 21:57:53,612 - INFO - Successfully registered callbacks from update_dropdowns
+2025-06-02 21:57:53,720 - INFO - NumExpr defaulting to 16 threads.
+2025-06-02 21:57:53,789 - INFO - Successfully registered callbacks from fetch_data
+2025-06-02 21:57:53,789 - INFO - Successfully registered callbacks from reprocess_data
+2025-06-02 21:57:53,911 - INFO - Successfully registered callbacks from update_chart
+2025-06-02 21:57:55,701 - INFO - Successfully registered callbacks from run_backtest
+2025-06-02 21:57:55,702 - INFO - Successfully registered callbacks from config_editor
+2025-06-02 21:57:55,702 - INFO - Dash is running on http://127.0.0.1:8050/
+
+2025-06-02 21:57:55,703 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8050
+2025-06-02 21:57:55,703 - INFO - [33mPress CTRL+C to quit[0m
