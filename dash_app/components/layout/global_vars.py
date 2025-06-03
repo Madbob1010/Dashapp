@@ -4,9 +4,7 @@ import os
 from trading_bot.config import settings
 from pathlib import Path
 from .data_load_tab import get_data_load_content
-from .data_view_tab import get_data_view_content
-
-# Define color scheme for consistency
+from .data_view_tab import get_data_view_content# Define color scheme for consistency
 COLORS = {
     'background': '#000000',  # Black background
     'text': '#FFFFFF',        # White text
@@ -32,3 +30,4 @@ def get_tabs_content(value):
     elif value == 'data-view':
         return get_data_view_content()
     return html.P("Select a tab to view content.", style={'color': COLORS['text']})
+    
