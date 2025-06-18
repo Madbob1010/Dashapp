@@ -1,8 +1,8 @@
 {
     "paths": {
-        "data_dir": "/home/madbob10/Dash/data",
-        "results_dir": "/home/madbob10/Dash/data/backtest_results",
-        "plots_dir": "/home/madbob10/Dash/data/backtest_plots"
+        "data_dir": "/root/Dash/data",
+        "results_dir": "/root/Dash/data/backtest_results",
+        "plots_dir": "/root/Dash/data/backtest_plots"
     },
     "backtest": {
         "param_range": {

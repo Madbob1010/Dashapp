@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/home/madbob10/Dash/data/config.log'),
+        logging.FileHandler('/root/Dash/data/config.log'),
         logging.StreamHandler()
     ]
 )
@@ -57,7 +57,7 @@ def register_callback(app):
         if not config_file:
             return html.P("No config selected", style={'color': 'red'})
 
-        config_path = Path('/home/madbob10/Dash/configs') / config_file
+        config_path = Path('/root/Dash/configs') / config_file
         try:
             with open(config_path, 'r') as f:
                 config = json.load(f)
@@ -130,7 +130,7 @@ def register_callback(app):
         if not config_name.endswith('.json'):
             config_name += '.json'
 
-        config_path = Path('/home/madbob10/Dash/configs') / config_name
+        config_path = Path('/root/Dash/configs') / config_name
         try:
             flat_config = {}
             for child in editor_children.get('props', {}).get('children', []):

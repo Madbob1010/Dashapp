@@ -5,6 +5,6 @@
         }
     ],
     "settings": {
-        "python.defaultInterpreterPath": "/home/madbob10/miniconda3/envs/py310/bin/python"
+        "python.defaultInterpreterPath": "/root/miniconda3/envs/mamba_trading/bin/python"
     }
 }

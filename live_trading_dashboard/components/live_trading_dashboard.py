@@ -1,8 +1,13 @@
-from dash import dcc, html 
+from dash import dcc, html, Dash, Input, Output
 import datetime
 import os
 from trading_bot.config import settings
 from pathlib import Path
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define color scheme for consistency
 COLORS = {
@@ -12,8 +17,12 @@ COLORS = {
     'border': '1px solid #333333'
 }
 
-def get_live_trading_content():
-    """Return content for the Live Trading Dashboard tab."""
+def get_data_view_content():
+    """Return content for the Data View tab."""
+    config_dir = Path('/root/Dash/configs')
+    config_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
+
+    # Simplified dropdown style with black text
     dropdown_style = {
         'width': '50%',
         'border': COLORS['border'],
@@ -22,130 +31,84 @@ def get_live_trading_content():
     }
 
     return html.Div([
-        html.H3("Live Trading Dashboard", style={'color': COLORS['text']}),
-        html.Label("Select Data Source (CSV):", style={'color': COLORS['text']}),
+        html.H3("View Cryptocurrency Data", style={'color': COLORS['text']}),
+        html.Label("Select Cryptocurrency Data:", style={'color': COLORS['text']}),
         dcc.Dropdown(
-            id='live-data-dropdown',
+            id='symbol-dropdown',
             options=[{'label': s, 'value': s} for s in os.listdir(settings.DATA_DIR) if s.endswith('.csv')],
             value=None,
             style=dropdown_style
         ),
-        dcc.Graph(
-            id='live-price-chart',
-            style={
-                'border': COLORS['border'],
-                'backgroundColor': COLORS['accent'],
-                'height': '400px',
-                'margin-top': '20px'
-            }
-        ),
+        dcc.Graph(id='price-chart', style={'border': COLORS['border'], 'backgroundColor': COLORS['accent']}),
         html.Hr(),
-        html.H3("Trading Controls", style={'color': COLORS['text']}),
-        html.Label("Select Trading Pair:", style={'color': COLORS['text']}),
+        html.H3("Configuration", style={'color': COLORS['text']}),
+        html.Label("Select Config File:", style={'color': COLORS['text']}),
         dcc.Dropdown(
-            id='trading-pair-dropdown',
-            options=[
-                {'label': 'BTC/USD', 'value': 'BTCUSD'},
-                {'label': 'ETH/USD', 'value': 'ETHUSD'},
-                {'label': 'LTC/USD', 'value': 'LTCUSD'}
-            ],
-            value='BTCUSD',
+            id='config-dropdown',
+            options=[{'label': f, 'value': f} for f in config_files],
+            value='default.json',
             style={**dropdown_style, 'margin-bottom': '10px'}
         ),
-        html.Label("Trade Amount:", style={'color': COLORS['text']}),
-        dcc.Input(
-            id='trade-amount',
-            type='number',
-            placeholder='Enter amount (e.g., 0.01 BTC)',
-            style={
-                'width': '50%',
-                'margin-bottom': '10px',
-                'border': COLORS['border'],
-                'backgroundColor': COLORS['accent'],
-                'color': COLORS['text']
-            }
-        ),
-        html.Div([
-            html.Button(
-                'Buy',
-                id='buy-button',
-                n_clicks=0,
-                style={
-                    'margin-right': '10px',
-                    'border': COLORS['border'],
-                    'backgroundColor': '#28a745',
-                    'color': COLORS['text']
-                }
-            ),
-            html.Button(
-                'Sell',
-                id='sell-button',
-                n_clicks=0,
-                style={
-                    'border': COLORS['border'],
-                    'backgroundColor': '#dc3545',
-                    'color': COLORS['text']
-                }
-            ),
-        ], style={'margin': '10px 0'}),
         html.Div(
-            id='trade-status',
+            id='config-editor',
             style={
-                'color': COLORS['text'],
-                'margin': '10px 0',
+                'margin': '20px 0',
                 'padding': '10px',
                 'border': COLORS['border'],
-                'backgroundColor': COLORS['accent']
+                'backgroundColor': COLORS['accent'],
+                'color': COLORS['text'],
+                'fontFamily': 'Arial, sans-serif'
             }
         ),
+        html.Label("Save Config As:", style={'color': COLORS['text']}),
+        dcc.Input(
+            id='config-save-name',
+            type='text',
+            placeholder='Enter config name (e.g., strategy1.json)',
+            style={'width': '50%', 'margin-bottom': '10px', 'border': COLORS['border'], 'backgroundColor': COLORS['accent'], 'color': COLORS['text']}
+        ),
+        html.Button('Save Config', id='save-config-button', n_clicks=0, style={'margin-left': '10px', 'border': COLORS['border'], 'backgroundColor': COLORS['accent'], 'color': COLORS['text']}),
+        html.Div(id='save-config-status', style={'color': COLORS['text'], 'margin': '10px 0'}),
         html.Hr(),
-        html.H3("Live Trading Settings", style={'color': COLORS['text']}),
+        html.H3("Run Backtest", style={'color': COLORS['text']}),
+        html.Label("Select CSV Files (or Entire File):", style={'color': COLORS['text']}),
+        dcc.Dropdown(
+            id='backtest-csv-dropdown',
+            options=[{'label': 'Entire File', 'value': 'all'}] + [{'label': s, 'value': s} for s in os.listdir(settings.DATA_DIR) if s.endswith('.csv')],
+            value=None,
+            multi=True,
+            style=dropdown_style
+        ),
+        html.Label("Backtest Options:", style={'color': COLORS['text']}),
         dcc.Checklist(
-            id='trading-options',
+            id='backtest-options',
             options=[
-                {'label': 'Enable Auto-Trading', 'value': 'auto_trading'},
-                {'label': 'Show Real-Time Alerts', 'value': 'alerts'},
-                {'label': 'Use Stop-Loss', 'value': 'stop_loss'},
+                {'label': 'Generate Plot', 'value': 'plot'},
+                {'label': 'Use LSTM', 'value': 'use_lstm'},
             ],
-            value=['alerts'],
+            value=['plot', 'use_lstm'],
             style={'margin': '10px', 'color': COLORS['text']}
         ),
-        html.Label("Update Interval (seconds):", style={'color': COLORS['text']}),
-        html.Div(
-            dcc.Slider(
-                id='update-interval',
-                min=1,
-                max=60,
-                step=1,
-                value=5,
-                marks={i: str(i) for i in range(1, 61, 5)},
-                className='slider-container'
-            ),
-            className='slider-container'
-        ),
-        dcc.Interval(
-            id='live-update',
-            interval=5*1000,  # Default 5 seconds
-            n_intervals=0
-        ),
-        html.Div(
-            id='live-status',
-            style={'color': COLORS['text'], 'margin': '10px 0'}
-        )
+        html.Button('Run Backtest', id='backtest-button', n_clicks=0, style={'border': COLORS['border'], 'backgroundColor': COLORS['accent'], 'color': COLORS['text']}),
+        html.Br(),
+        html.Div(id='backtest-status', style={'color': COLORS['text']})
     ], style={'backgroundColor': COLORS['background'], 'padding': '20px'})
+
+def get_live_trading_content():
+    pass  # Placeholder or implement as needed
 
 def get_layout():
     """Return the Dash app layout."""
     return html.Div([
-        html.H1("Live Trading Dashboard", style={'textAlign': 'center', 'color': COLORS['text']}),
-        dcc.Tabs(id='tabs', value='live-trading', children=[
-            dcc.Tab(label='Live Trading', value='live-trading', style={'color': COLORS['text'], 'backgroundColor': COLORS['accent']}),
+        html.H1("Live Trading DashBoard", style={'textAlign': 'center', 'color': COLORS['text']}),
+        dcc.Tabs(id='tabs', value='data-view', children=[
+            dcc.Tab(label='Live Trading', value='data-view', style={'color': COLORS['text'], 'backgroundColor': COLORS['accent']}),
         ], style={'backgroundColor': COLORS['background'], 'border': COLORS['border']}),
         html.Div(id='tabs-content', style={'backgroundColor': COLORS['background'], 'padding': '20px', 'border': COLORS['border']})
     ], style={'backgroundColor': COLORS['background'], 'minHeight': '100vh'})
 
 def get_tabs_content(value):
     """Return content based on selected tab."""
-    if value == 'live-trading':
-        return get_live_trading_content()
+    if value == 'data-load':
+        return get_data_view_content()
     return html.P("Select a tab to view content.", style={'color': COLORS['text']})

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # Base directory for data
-DATA_DIR = Path("/home/madbob10/Dash/data")
+DATA_DIR = Path("/root/Dash/data")
 BACKTEST_RESULTS_DIR = DATA_DIR / "backtest_results"
 PLOTS_DIR = DATA_DIR / "backtest_plots"
 

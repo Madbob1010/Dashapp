@@ -13,7 +13,7 @@ COLORS = {
 
 def get_data_view_content():
     """Return content for the Data View tab."""
-    config_dir = Path('/home/madbob10/Dash/configs')
+    config_dir = Path('/root/Dash/configs')
     config_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
 
     # Simplified dropdown style with black text
