@@ -1,0 +1,14 @@
+2025-06-01 22:59:39,079 - INFO - NumExpr defaulting to 16 threads.
+2025-06-01 22:59:39,146 - WARNING - Module fetch_data does not have a register_callbacks function
+2025-06-01 22:59:39,146 - WARNING - Module reprocess_data does not have a register_callbacks function
+2025-06-01 22:59:39,260 - WARNING - Module update_chart does not have a register_callbacks function
+2025-06-01 23:00:03,312 - INFO - NumExpr defaulting to 16 threads.
+2025-06-01 23:00:03,379 - WARNING - Module fetch_data does not have a register_callbacks function
+2025-06-01 23:00:03,379 - WARNING - Module reprocess_data does not have a register_callbacks function
+2025-06-01 23:00:03,495 - WARNING - Module update_chart does not have a register_callbacks function
+2025-06-01 23:00:03,497 - INFO - Dash is running on http://127.0.0.1:8050/
+
+2025-06-01 23:00:03,949 - INFO - NumExpr defaulting to 16 threads.
+2025-06-01 23:00:04,020 - WARNING - Module fetch_data does not have a register_callbacks function
+2025-06-01 23:00:04,020 - WARNING - Module reprocess_data does not have a register_callbacks function
+2025-06-01 23:00:04,134 - WARNING - Module update_chart does not have a register_callbacks function

@@ -4,10 +4,10 @@ from pathlib import Path
 # Base directory for data
 DATA_DIR = Path("/home/madbob10/Dash/data")
 BACKTEST_RESULTS_DIR = DATA_DIR / "backtest_results"
-BACKTEST_PLOTS_DIR = DATA_DIR / "backtest_plots"
+PLOTS_DIR = DATA_DIR / "backtest_plots"
 
 # Ensure directories exist
-for directory in [DATA_DIR, BACKTEST_RESULTS_DIR, BACKTEST_PLOTS_DIR]:
+for directory in [DATA_DIR, BACKTEST_RESULTS_DIR, PLOTS_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # Plot settings

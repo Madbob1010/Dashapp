@@ -1,23 +1,20 @@
 version: '3.8'
-
 services:
-  trading-dashboard:
+  trading_env:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: trading-dashboard
+    image: trading_env:latest
     ports:
-      - "8050:8050"
+      - "8050:8050"  # Dash app port
     volumes:
-      - ./data:/home/madbob10/Dash/data
-      # For development (uncomment to map source files for live editing)
-      # - ./backtestrocm3.py:/app/backtestrocm3.py
-      # - ./datalinux2.py:/app/datalinux2.py
-      # - ./trading_dashboard.py:/app/trading_dashboard.py
+      - .:/app  # Mount project directory
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]  # For ROCm GPU access
     environment:
-      - PYTHONUNBUFFERED=1
-    # Optional: GPU passthrough for ROCm (uncomment if needed)
-    # devices:
-    #  - /dev/kfd:/dev/kfd
-    #  - /dev/dri:/dev/dri
-    restart: unless-stopped
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0  # For RX 7800 XT
+    command: python trading_dashboard.py
