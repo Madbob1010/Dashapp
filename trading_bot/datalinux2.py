@@ -9,6 +9,7 @@ import logging
 from tqdm import tqdm
 from colorama import init, Fore, Style
 from typing import Optional
+from dash_app.config.paths import BASE_DIR, DATA_DIR, RESULTS_DIR, PLOTS_DIR
 
 # Initialize colorama for colored terminal output
 init(autoreset=True)
@@ -229,7 +230,7 @@ if __name__ == "__main__":
     symbols = ["BTCUSDT", "XRPUSDT", "ETHUSDT", "XLMUSDT"]
     end_date = datetime.datetime.now()
     start_date = end_date - datetime.timedelta(days=7)
-    data_dir = "/home/madbob10/Dash/data/"
+    data_dir = DATA_DIR
     
     print(f"{Fore.CYAN}Starting crypto data fetch for {len(symbols)} symbols...{Style.RESET_ALL}")
     fetch_multiple_cryptos(symbols, start_date, end_date, data_dir=data_dir)

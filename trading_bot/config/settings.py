@@ -1,17 +1,18 @@
 import os
 from pathlib import Path
+from dash_app.config.paths import BASE_DIR, DATA_DIR, RESULTS_DIR, PLOTS_DIR
 
-# Base directory
-BASE_DIR = Path('/home/madbob10/Dash')
 
-# Data directories
-DATA_DIR = BASE_DIR / 'data'
-RESULTS_DIR = DATA_DIR / 'backtest_results'
-PLOTS_DIR = DATA_DIR / 'backtest_plots'
+# Define BASE_DIR relative to settings.py (Dash/dash_app/config -> Dash)
+BASE_DIR = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+DATA_DIR = BASE_DIR / "data"
+RESULTS_DIR = BASE_DIR / "results"
+PLOTS_DIR = BASE_DIR / "plots"
 
-# Ensure directories exist
-for directory in [DATA_DIR, RESULTS_DIR, PLOTS_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
+# Create directories if they don't exist
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Backtest parameter ranges
 PARAM_RANGE = {
