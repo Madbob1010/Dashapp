@@ -1,7 +1,7 @@
 from dash import dcc, html, Dash, Input, Output
 import datetime
 import os
-from trading_bot.config import settings
+from live_trading_dashboard.config import settings
 from pathlib import Path
 import logging
 

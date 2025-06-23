@@ -7,13 +7,28 @@
     "backtest": {
         "param_range": {
             "ema_length": [
-                20
+                15,
+                20,
+                25,
+                30,
+                35,
+                40
             ],
             "rsi_length": [
-                15
+                15,
+                20,
+                25,
+                30,
+                35,
+                40
             ],
             "rsi_threshold": [
-                40
+                30,
+                35,
+                40,
+                45,
+                50,
+                55
             ]
         }
     },
@@ -21,13 +36,11 @@
         "lookback": 15,
         "epochs": 5,
         "batch_size": 128
-        
     },
     "plotting": {
         "height": 600,
-        "width": 1400,
+        "width": 900,
         "template": "plotly_dark"
-        
     },
     "vectorbt": {
         "plotting": {
