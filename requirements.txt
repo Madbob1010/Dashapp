@@ -1,0 +1,11 @@
+cat << EOF > ~/Dash/requirements.txt
+aiodns==3.4.0
+aiohttp==3.12.1
+ccxt==4.4.85
+dash==3.0.4
+dateparser==1.2.1
+flask==3.0.3
+numpy==2.2.6
+plotly==5.24.1
+vectorbt==0.27.3
+EOF
